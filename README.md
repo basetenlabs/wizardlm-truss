@@ -19,13 +19,6 @@ resources:
   accelerator: A10G
 ...
 ```
-The usual GPT-style parameters will pass right through to the inference point:
-
-* max_new_tokens (_default_: 64)
-* temperature (_default_: 0.5)
-* top_p (_default_: 0.9)
-* top_k (_default_: 0)
-* num_beams (_default_: 4)
 
 Deploying the Truss is easy; simply load it and push.
 
@@ -35,4 +28,21 @@ import truss
 
 wizardlm_truss = truss.load('.')
 baseten.deploy(wizardlm_truss)
+```
+
+## Invoking WizardLM
+
+The usual GPT-style parameters will pass right through to the inference point:
+
+* max_new_tokens (_default_: 64)
+* temperature (_default_: 0.5)
+* top_p (_default_: 0.9)
+* top_k (_default_: 0)
+* num_beams (_default_: 4)
+
+
+```python
+import baseten
+model = baseten.deployed_model_id('YOUR MODEL ID')
+model.predict({"prompt": "What's the weather like?"})
 ```
