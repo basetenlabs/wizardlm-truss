@@ -32,8 +32,8 @@ class Model:
         self.model = model
         self.tokenizer = tokenizer
 
-    def predict(self, model_input: Any) -> Any:
-        _output = evaluate(self.model, self.tokenizer, model_input)
+    def predict(self, model_input: Any, **kwargs) -> Any:
+        _output = evaluate(self.model, self.tokenizer, model_input, **kwargs)
         final_output = _output[0].split("### Response:")[1].strip()
         return final_output
 
