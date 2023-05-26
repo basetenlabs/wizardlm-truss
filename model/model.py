@@ -1,74 +1,80 @@
-from typing import Dict, List
-from peft import PeftModel
+from typing import Any
+
+import sys
+import os
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, StoppingCriteria, StoppingCriteriaList
+import transformers
+import json
 
-
-class StopOnTokens(StoppingCriteria):
-    def __call__(self, input_ids: torch.LongTensor, scores: torch.FloatTensor, **kwargs) -> bool:
-        stop_ids = [50278, 50279, 50277, 1, 0]
-        for stop_id in stop_ids:
-            if input_ids[0][-1] == stop_id:
-                return True
-        return False
+from transformers import LlamaTokenizer, LlamaForCausalLM, GenerationConfig
 
 class Model:
     def __init__(self, **kwargs) -> None:
-        self._data_dir = kwargs["data_dir"]
-        self._config = kwargs["config"]
-        self._secrets = kwargs["secrets"]
-        self._model = None
-        self._tokenizer = None
+        self.model = None
+        self.tokenizer = None
 
     def load(self):
-        model_name = "stabilityai/stablelm-tuned-alpha-7b" #@param ["stabilityai/stablelm-base-alpha-7b", "stabilityai/stablelm-tuned-alpha-7b", "stabilityai/stablelm-base-alpha-3b", "stabilityai/stablelm-tuned-alpha-3b"]
-        # Select "big model inference" parameters
-        torch_dtype = "float16" #@param ["float16", "bfloat16", "float"]
-        load_in_8bit = False #@param {type:"boolean"}
-        device_map = "auto"
-        self._tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self._model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            torch_dtype=getattr(torch, torch_dtype),
-            load_in_8bit=load_in_8bit,
-            device_map=device_map,
-            offload_folder="./offload",
+        # Load model here and assign to self._model.
+        base_model = "TheBloke/wizardLM-7B-HF"
+        tokenizer = LlamaTokenizer.from_pretrained(base_model)
+        model = LlamaForCausalLM.from_pretrained(
+            base_model,
+            load_in_8bit=False,
+            torch_dtype=torch.float16,
+            device_map="auto",
         )
-        self._model.eval()
+        model.config.pad_token_id = tokenizer.pad_token_id = 0  # unk
+        model.config.bos_token_id = 1
+        model.config.eos_token_id = 2
+        model.half()
+        model.eval()
+        
+        self.model = model
+        self.tokenizer = tokenizer
 
-    def preprocess(self, request: Dict) -> Dict:
-        """
-        Incorporate pre-processing required by the model if desired here.
-        These might be feature transformations that are tightly coupled to the model.
-        """
-        return request
+    def predict(self, model_input: Any) -> Any:
+        _output = evaluate(self.model, self.tokenizer, model_input)
+        final_output = _output[0].split("### Response:")[1].strip()
+        return final_output
 
-    def postprocess(self, request: Dict) -> Dict:
-        """
-        Incorporate post-processing required by the model if desired here.
-        """
-        return request
     
-    def forward(self, instruction, max_new_tokens=64, temperature=0.5, top_p=0.9, top_k=0, num_beams=4, do_sample=True, **kwargs):
-        stop = StopOnTokens()
-        inputs = self._tokenizer(instruction, return_tensors="pt")
-        inputs.to(self._model.device)
-        tokens = self._model.generate(
-            **inputs,
-            max_new_tokens=max_new_tokens,  
-            temperature=temperature,
-            top_k=top_k,
-            top_p=top_p,
-            do_sample=do_sample,
-            pad_token_id=self._tokenizer.eos_token_id,
-            stopping_criteria=StoppingCriteriaList([stop])
+def evaluate(
+        model,
+        tokenizer,
+        model_input,
+        input=None,
+        temperature=1,
+        top_p=0.9,
+        top_k=40,
+        num_beams=1,
+        max_new_tokens=2048,
+        **kwargs,
+):
+    prompts = generate_prompt(model_input, input)
+    inputs = tokenizer(prompts, return_tensors="pt", max_length=1024, truncation=True, padding=True)
+    input_ids = inputs["input_ids"].to("cuda")
+    generation_config = GenerationConfig(
+        temperature=temperature,
+        top_p=top_p,
+        top_k=top_k,
+        num_beams=num_beams,
+        **kwargs,
+    )
+    with torch.no_grad():
+        generation_output = model.generate(
+            input_ids=input_ids,
+            generation_config=generation_config,
+            return_dict_in_generate=True,
+            output_scores=True,
+            max_new_tokens=max_new_tokens,
         )
+    s = generation_output.sequences
+    output = tokenizer.batch_decode(s, skip_special_tokens=True)
+    return output
 
-        completion_tokens = tokens[0][inputs['input_ids'].size(1):]
-        completion = self._tokenizer.decode(completion_tokens, skip_special_tokens=True)
-        return completion
 
-    def predict(self, request: Dict) -> Dict[str, List]:
-        prompt = request.pop("prompt")
-        completion = self.forward(prompt, **request)
-        return {"completion" : completion}
+def generate_prompt(instruction, input=None):
+    return f"""{instruction}
+
+### Response:
+"""
