@@ -33,6 +33,7 @@ class Model:
         self.tokenizer = tokenizer
 
     def predict(self, request) -> Any:
+        prompt = request.pop("prompt")
         _output = evaluate(self.model, self.tokenizer, prompt, **request)
         final_output = _output[0].split("### Response:")[1].strip()
         return final_output
