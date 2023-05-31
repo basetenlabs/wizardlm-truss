@@ -1,7 +1,7 @@
 base_image: null
 bundled_packages_dir: packages
 data_dir: data
-description: WizardLM — An Instruction-following LLM Using Evol-Instruct
+description: An instruction-following LLM Using Evol-Instruct.
 environment_variables: {}
 examples_filename: examples.yaml
 external_package_dirs: []
