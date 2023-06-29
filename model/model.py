@@ -6,7 +6,8 @@ import torch
 import transformers
 import json
 
-from transformers import LlamaTokenizer, LlamaForCausalLM, GenerationConfig
+from transformers import LlamaTokenizer, LlamaForCausalLM, GenerationConfig, TextIteratorStreamer
+from threading import Thread
 
 class Model:
     def __init__(self, **kwargs) -> None:
@@ -35,8 +36,7 @@ class Model:
     def predict(self, request) -> Any:
         prompt = request.pop("prompt")
         _output = evaluate(self.model, self.tokenizer, prompt, **request)
-        final_output = _output[0].split("### Response:")[1].strip()
-        return final_output
+        return _output
 
     
 def evaluate(
@@ -61,17 +61,29 @@ def evaluate(
         num_beams=num_beams,
         **kwargs,
     )
+    streamer = TextIteratorStreamer(tokenizer)
+
     with torch.no_grad():
-        generation_output = model.generate(
-            input_ids=input_ids,
-            generation_config=generation_config,
-            return_dict_in_generate=True,
-            output_scores=True,
-            max_new_tokens=max_new_tokens,
-        )
-    s = generation_output.sequences
-    output = tokenizer.batch_decode(s, skip_special_tokens=True)
-    return output
+        generation_kwargs = {
+           "input_ids": input_ids,
+           "generation_config": generation_config,
+           "return_dict_in_generate": True,
+           "output_scores": True,
+           "max_new_tokens": max_new_tokens,
+           "streamer": streamer
+        }
+
+
+        # From https://huggingface.co/docs/transformers/generation_strategies#streaming
+        thread = Thread(target=model.generate, kwargs=generation_kwargs)
+
+        thread.start()
+        def inner():
+            for text in streamer:
+                yield text
+            thread.join()
+
+    return inner()
 
 
 def generate_prompt(instruction, input=None):
