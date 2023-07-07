@@ -8,32 +8,21 @@ Utilizing this model for inference can be challenging given the hardware require
 
 ## Deploying WizardLM
 
-We found this model runs reasonably fast on A10Gs; you can configure the hardware you'd like in the `config.yaml`.
+To deploy, make sure you have a Baseten account and API key. You can sign up for a Baseten account [here](https://app.baseten.co/signup).
 
-```yaml
-...
-resources:
-  cpu: "3"
-  memory: 14Gi
-  use_gpu: true
-  accelerator: A10G
-...
+**Setup:**
+
+```
+pip install --upgrade baseten
+baseten login
 ```
 
-Before deployment:
+**Deployment**
 
-1. Make sure you have a Baseten account and API key. You can sign up for a Baseten account [here](https://app.baseten.co/signup).
-2. Install Truss and the Baseten Python client: `pip install --upgrade baseten truss`
-3. Authenticate your development environment with `baseten login`
-
-Deploying the Truss is easy; simply load it and push from a Python script:
-
-```python
-import baseten
-import truss
-
-wizardlm_truss = truss.load('.')
-baseten.deploy(wizardlm_truss)
+```
+git clone git@github.com:basetenlabs/wizardlm-truss.git
+cd wizardlm-truss
+truss push --model-name="WizardLM" --remote-name="baseten"
 ```
 
 ## Invoking WizardLM
@@ -63,4 +52,20 @@ curl -X POST " https://app.baseten.co/models/YOUR_MODEL_ID/predict" \
            "prompt": "What is the difference between a wizard and a sorcerer?",
            "temperature": 0.3
          }'
+```
+
+## Hardware
+
+We found this model runs reasonably fast on A10Gs; you can configure the hardware you'd like in the `config.yaml`.
+
+Default config:
+
+```yaml
+...
+resources:
+  cpu: "3"
+  memory: 14Gi
+  use_gpu: true
+  accelerator: A10G
+...
 ```

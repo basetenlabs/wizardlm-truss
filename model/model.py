@@ -1,10 +1,6 @@
 from typing import Any
 
-import sys
-import os
 import torch
-import transformers
-import json
 
 from transformers import LlamaTokenizer, LlamaForCausalLM, GenerationConfig
 
