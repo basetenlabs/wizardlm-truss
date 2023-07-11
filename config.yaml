@@ -21,13 +21,13 @@ model_name: WizardLM
 model_type: custom
 python_version: py39
 requirements:
-- torch==2.0.1
-- peft==0.3.0
-- sentencepiece==0.1.99
 - accelerate==0.20.3
-- bitsandbytes==0.39.0
+- bitsandbytes==0.39.1
+- peft==0.3.0
 - protobuf==4.23.3
-- git+https://github.com/huggingface/transformers.git
+- sentencepiece==0.1.99
+- torch==2.0.1
+- transformers==4.30.2
 resources:
   cpu: "3"
   memory: 14Gi
