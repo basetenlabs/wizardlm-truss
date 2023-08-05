@@ -1,10 +1,5 @@
 from typing import Any
-
-import sys
-import os
 import torch
-import transformers
-import json
 
 from transformers import LlamaTokenizer, LlamaForCausalLM, GenerationConfig
 
@@ -15,7 +10,7 @@ class Model:
 
     def load(self):
         # Load model here and assign to self._model.
-        base_model = "TheBloke/wizardLM-7B-HF"
+        base_model = "WizardLM/WizardLM-13B-V1.1"
         tokenizer = LlamaTokenizer.from_pretrained(base_model)
         model = LlamaForCausalLM.from_pretrained(
             base_model,

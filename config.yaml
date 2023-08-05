@@ -30,9 +30,9 @@ requirements:
 - transformers==4.30.2
 resources:
   cpu: "3"
-  memory: 14Gi
+  memory: 30Gi
   use_gpu: true
-  accelerator: A10G
+  accelerator: A100
 secrets: {}
 spec_version: '2.0'
 system_packages: []
